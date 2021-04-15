@@ -18,7 +18,7 @@ def load_data(directory):
     Load data from CSV files into memory.
     """
     # Load people
-    with open(f'small/people.csv', encoding="utf-8") as f:
+    with open(f"{directory}/people.csv", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             people[row["id"]] = {
@@ -56,32 +56,36 @@ def main():
     if len(sys.argv) > 2:
         sys.exit("Usage: python degrees.py [directory]")
     directory = sys.argv[1] if len(sys.argv) == 2 else "large"
-
+    start=time.time()
     # Load data from files into memory
     print("Loading data...")
     load_data(directory)
     print("Data loaded.")
+    end=time.time()
+    print(f"took \t {int(end-start)} seconds")
 
-    source = person_id_for_name(input("Name: "))
-    if source is None:
-        sys.exit("Person not found.")
-    target = person_id_for_name(input("Name: "))
-    if target is None:
-        sys.exit("Person not found.")
+    #while so that the data is loaded ony one time 
+    while True:
+        source = person_id_for_name(input("Name: "))
+        if source is None:
+            sys.exit("Person not found.")
+        target = person_id_for_name(input("Name: "))
+        if target is None:
+            sys.exit("Person not found.")
 
-    path = shortest_path(source, target)
+        path = shortest_path(source, target)
 
-    if path is None:
-        print("Not connected.")
-    else:
-        degrees = len(path)
-        print(f"{degrees} degrees of separation.")
-        path = [(None, source)] + path
-        for i in range(degrees):
-            person1 = people[path[i][1]]["name"]
-            person2 = people[path[i + 1][1]]["name"]
-            movie = movies[path[i + 1][0]]["title"]
-            print(f"{i + 1}: {person1} and {person2} starred in {movie}")
+        if path is None:
+            print("Not connected.")
+        else:
+            degrees = len(path)
+            print(f"{degrees} degrees of separation.")
+            path = [(None, source)] + path
+            for i in range(degrees):
+                person1 = people[path[i][1]]["name"]
+                person2 = people[path[i + 1][1]]["name"]
+                movie = movies[path[i + 1][0]]["title"]
+                print(f"{i + 1}: {person1} and {person2} starred in {movie}")
 
 
 def shortest_path(source, target):
@@ -91,10 +95,42 @@ def shortest_path(source, target):
 
     If no possible path, returns None.
     """
-    
+    #april 15th 9am 
+    explorednum=0                                                          #no of explored nodes
 
-    # TODO
-    raise NotImplementedError
+    start = Node(state=source,parent=None,action=None)                     #defined start to start from 
+    frontire = QueueFrontier()                                             
+    frontire.add(start)          #added to frontier the start
+    explored = set()             #to store the explored nodes 
+    
+    #iterate till we find the target 
+    while True:
+        if frontire.empty():     #when frontire gets empty mean not found 
+            return None
+
+        node = frontire.remove()    #remove the node from frontire as it is being looked into now 
+        explorednum = explorednum+1 #increase the exporednum  by 1 
+
+        explored.add(node.state)    #added to explored set
+
+        #for the neighbours of the node 
+        # neighbors_for_person will return a set  
+        for action,state in neighbors_for_person(node.state):
+            if not frontire.contains_state(state) and state not in explored:
+                child = Node(state=state,parent=node,action=action)
+                #if found
+                if child.state ==target:
+                    movies_path = []
+                    people_path = []
+                    while child.parent is not None:
+                        movies_path.append(child.action)
+                        people_path.append(child.state)
+                        child = child.parent
+                    movies_path.reverse()
+                    people_path.reverse()
+                    return list(zip(movies_path,people_path))
+                #else
+                frontire.add(child)
 
 
 def person_id_for_name(name):
